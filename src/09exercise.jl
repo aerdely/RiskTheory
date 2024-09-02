@@ -23,7 +23,7 @@
 ## Load needed packages and code
 
 begin
-    using CSV, DataFrames, Plots, Distributions
+    using CSV, DataFrames, Plots, Distributions, StatsBase
     include("02probestim.jl")
 end
 
@@ -213,7 +213,7 @@ begin
         end
         medianY[i] = median(y)
     end
-    c = round(cor(nY, medianY), digits = 2)
+    c = round(corspearman(nY, medianY), digits = 2)
     scatter(nY, medianY, legend = false, title = "corr = $c", 
             xlabel = "frequency", ylabel = "median severity"
     )
@@ -240,7 +240,7 @@ sev.valores # severity possible values
 m = 100_000 # number of simulations
 N = rand(rvN, m)
 S = zeros(m)
-@time for i ∈ 1:m 
+@time for i ∈ 1:m # less than 1 second
     if N[i] > 0
         S[i] = sum(sev.valores[rand(rvY, N[i])])
     end
