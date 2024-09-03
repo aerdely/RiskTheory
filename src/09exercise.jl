@@ -1,20 +1,20 @@
 ### Exercise: Collective Risk Model
 ### Author: Dr. Arturo Erdely
-### Version: 2024-09-01
+### Version: 2024-09-03
 
 #=
 
-    Consider a portfolio of 1-year term life insurance independent policies from
-    the file `LIFEinsurance.csv` that specifies age and insured amount for each
-    policy, with the additional benefit of twice the insured amount in case of
-    accidental death, assuming that 1 out of 10 deaths is accidental (regardless
-    of the age). Use the mortality table in the file `mortality.csv` 
+Consider a portfolio of 1-year term life insurance independent policies from
+the file `LIFEinsurance.csv` that specifies age and insured amount for each
+policy, with the additional benefit of twice the insured amount in case of
+accidental death, assuming that 1 out of 10 deaths is accidental (regardless
+of the age). Use the mortality table in the file `mortality.csv` 
 
-    Build a collective risk model that approximates the results of the individual
-    risk model (see 08exercise.jl).
+Build a collective risk model that approximates the results of the individual
+risk model (see 08exercise.jl).
    	
-    Remember that the data can be downloaded from the Github repository of this course:
-    https://github.com/aerdely/RiskTheory
+Remember that the data can be downloaded from the Github repository of this course:
+https://github.com/aerdely/RiskTheory
 
 =#
 
@@ -72,6 +72,8 @@ end
         isimN = isimN .+ Death
         isimS = isimS .+ (policy.INSAMOUNT[j] .* Death .* (1 .+ Accident))
     end
+end;
+begin
     println("Theoretical vs simulation approx:")
     println("---------------------------------")
     println("E(S) = ", (ES, mean(isimS)))
@@ -85,16 +87,17 @@ end
 ## Frequency model (N)
 
 #=
-    N = ∑1{Xj>0} = ∑Dj where Dj~Bernoulli(qj), j ∈ {1,…,r},
-    with `r`the number of policies in the portfolio. 
-    Then Ran N = {0,1,…,r} and E(N) = ∑qj and V(N) = ∑qj(1-qj)
-    since D1,…,Dr are independent (but not identically distirbuted).
 
-    Question: Is the distribution of N approximately Binomial?
+N = ∑1{Xj>0} = ∑Dj where Dj~Bernoulli(qj), j ∈ {1,…,r},
+with `r`the number of policies in the portfolio. 
+Then Ran N = {0,1,…,r} and E(N) = ∑qj and V(N) = ∑qj(1-qj)
+since D1,…,Dr are independent (but not identically distributed).
 
-    In such case E(N) = r⋅qN for some 0 < qN < 1, that is:
+Question: Is the distribution of N approximately Binomial?
 
-    qN = ∑qj / r   (the average of all qj's)
+In such case E(N) = r⋅qN for some 0 < qN < 1, that is:
+
+qN = ∑qj / r   (the average of all qj's)
 
 =#
 
@@ -120,16 +123,18 @@ end
 ## Severity model 
 
 #=
-    S = Y1 + Y2 + ⋯ + YN
 
-    Given N = n we have to take a sample of size n without replacement
-    from the r policies in the portfolio, with probabilities proportional
-    to their mortality rate:
+S = Y1 + Y2 + ⋯ + YN
 
-    P(policy j) ∝ qj
+Given N = n we have to take a sample of size n without replacement
+from the r policies in the portfolio, with probabilities proportional
+to their mortality rate:
 
-    and then add their insured amounts Y1,…,Yn (possibly multiplied by 2
-    if it was a accident) to get a simulation of S.
+P(policy j) ∝ qj
+
+and then add their insured amounts Y1,…,Yn (possibly multiplied by 2
+if it was a accident) to get a simulation of S.
+
 =#
 
 function sampleNoReplace(Ω::Vector, p::Vector, n::Integer = length(Ω); warn = true)
@@ -155,6 +160,7 @@ function sampleNoReplace(Ω::Vector, p::Vector, n::Integer = length(Ω); warn = 
             @warn "Values in `p` where standardized to sum 1.0"
         end
     end
+    ### Generating the sample
     function simuno(u, probs)
         c = 1
         for θ ∈ cumsum(probs)
@@ -179,10 +185,10 @@ end
 # simulate claims frequencies and severities
 @time begin # 3 minutes approx for 10,000 simulations
     m = 10_000 # number of simulations
-    csimN = rand(rvN, m)
-    A = Bernoulli(k)
+    csimN = rand(rvN, m) # frequency simulation
+    A = Bernoulli(k) # accident random variable
     csimY = []
-    csimS = zeros(m)
+    csimS = zeros(m) # total claims vector
     Ω = collect(1:r) # policy numbers j ∈ {1,…,r}
     for i ∈ 1:m
         if csimN[i] > 0
