@@ -27,7 +27,7 @@ begin
     include("02probestim.jl")
 end
 
-@doc Pareto  
+@doc Pareto
 
 
 
@@ -35,11 +35,12 @@ end
 
 function simulateCRM(; β = 3.0, θ = 1.0, δ = 1.0, m = 1_000_000)
     S = zeros(m)
-    N = Int.(floor.(rand(Pareto(β, θ), m) .- θ)) # m = number of simulations
+    X = Pareto(β, θ)
+    N = Int.(floor.(rand(X, m) .- θ)) # m = number of simulations
     iN = findall(N .≥ 1)  # positions in N such that N ≥ 1
-    Y = zeros(0) # same as: Y = Float64[]
+    Y = []
     for i ∈ iN
-        Yi = rand(Pareto(2 + 1/N[i], δ), N[i])
+        Yi = rand(Pareto(2 + 1/N[i], δ), N[i]) # Y|N=n ~ Pareto(2+1/n, δ)
         S[i] = sum(Yi)
         append!(Y, Yi)
     end
@@ -62,9 +63,9 @@ begin # run several times to check differences
     println("P(S = 0) = ", sim.PS0)
 end
 
-length(sim.S), length(sim.N), length(sim.Y)
+length(sim.S), length(sim.N)
 count(sim.N .> 0)
-
+sum(sim.N), length(sim.Y)
 
 ## Calculations about S|S>0  (positive total claims)
 
