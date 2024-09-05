@@ -108,7 +108,7 @@ function EDA(fobj, valmin, valmax; iEnteros = zeros(Int, 0), tamgen = 1000,
     fxopt = fobj(xopt)
     r = (x = xopt, fx = fxopt, iter = numiter)
     if numiter == maxiter
-        @warn "Maximum number of $maxiter iterations before reaching stoping criteria."
+        @warn "Maximum number of $maxiter iterations before reaching stopping criteria."
     end
     return r
 end
