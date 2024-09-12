@@ -1,6 +1,6 @@
 ### Exercise: Premium principles
 ### Author: Dr. Arturo Erdely
-### Version: 2024-09-11
+### Version: 2024-09-12
 
 #=
 
@@ -17,7 +17,6 @@ Assuming that deaths are uniformly distributed (probabilistically) throughout
 the year, using 100,000 simulations of the portfolio, estimate quantiles
 2.5%, 25%, 50% (median), 75%, and 97.5% of the ROE, and the probability
 P(ROE ≥ 12%) under each of the following premium principles:
-
 
 a) Expected value principle.
 b) Variance principle.
@@ -72,7 +71,7 @@ size(policy)
 
 
 #=
-   Approximate median and 99.5% Value at Risk for total claims: M(S) and $VaR(S).
+   Approximate median and 99.5% Value at Risk for total claims: M(S) and VaR(S).
 =#
 
 m = 100_000 # number of simulations
@@ -186,4 +185,143 @@ histogram(PDPV, label = "PD / PV", xlabel = "ratio", ylabel = "frequency", color
 
 ### Estimation of P(ROE ≥ 12%)
 
-#   ... pending
+## Claims
+
+function simulateClaims() # from each insurance policy
+    n = length(policy.AGE)
+    k = 1/10 # probability of accident given death
+    Death = zeros(n) 
+    Accident = rand(Bernoulli(k), n)
+    Claim = zeros(n)
+    for j ∈ 1:n
+        Death[j] = rand(Bernoulli(q[policy.AGE[j]]), 1)[1]
+        Claim[j] = policy.INSAMOUNT[j] * Death[j] * (1 + Accident[j])
+    end
+    return Claim # vector of each policy claim (if any)
+end
+
+ES, VaR, sum(simulateClaims()) # try several times just to see
+
+
+## Accouting 
+
+function simulateAcc(premiumPrinciple::String) 
+    # "E" = expected value | "V" = variance | "D" = Exercise 2.3
+    # Liabilities
+    BEL = zeros(367); RM = zeros(367); L = zeros(367)
+    # Assets: AR (reserves -> rate i), AF (free -> r)
+    AR = zeros(367); AF = zeros(367); A = zeros(367) 
+    # Capital
+    SCR = zeros(367); K = zeros(367) 
+    # [1] -> starting values | [2:366] -> 365 days of the year | [367] -> closing of the year
+    if premiumPrinciple ∈ ["E", "V"]
+        BEL[1] = ES; RM[1] = RMe; SCR[1] = SCRe
+    elseif premiumPrinciple == "D"
+        BEL[1] = MS; RM[1] = RMm; SCR[1] = SCRm
+    else
+        println("Unknown premium principle, try again!")
+        return nothing
+    end
+    # starting Balance Sheet:
+    L[1] = BEL[1] + RM[1]
+    K[1] = SCR[1]
+    AR[1] = L[1] + SCR[1]; AF[1] = 0; A[1] = AR[1] + AF[1]
+    # claims of the year:
+    claims = simulateClaims() # from each insurance policy
+    idClaims = findall(a -> a > 0, claims) # policies with positive claims
+    n = length(claims) # number of insurance policies in portfolio
+    dayClaim = rand(DiscreteUniform(2, 366), n) # uniform distribution of claims during the year
+    C = zeros(367) # to allocate total claims amount per day
+    # equivalent daily rates:
+    ii = (1 + i)^(1/365) - 1 # equivalent daily rate
+    rr = (1 + r)^(1/365) - 1 # equivalent daily rate
+    # simulate daily accounting:
+    for d ∈ 2:366
+        policies = findall(j -> j == d, dayClaim) ∩ idClaims
+        C[d] = sum(claims[policies])
+        BEL[d] = max(0, BEL[d-1] - C[d]) # until we run out of BEL
+        RM[d] = max(0, RM[d-1] + min(0, BEL[d-1] - C[d])) # until we run out of RM (after BEL)
+        L[d] = BEL[d] + RM[d]
+        SCR[d] = max(0, SCR[d-1] + min(0, BEL[d-1] + RM[d-1] - C[d])) # until we run out of SCR (after RM)
+        A[d] = (1 + ii)*AR[d-1] + (1 + rr)*AF[d-1] - C[d]
+        AR[d] = L[d] + SCR[d]
+        AF[d] = A[d] - AR[d]
+        K[d] = A[d] - L[d]
+    end
+    # closing of the year:
+    K[367] = K[366] + BEL[366] + RM[366] # kill remaining BEL and RM (if any)
+    AR[367] = 0; AF[367] = A[366]; A[367] = A[366] # all assets become free
+    C[367] = sum(C[2:366]) # total claims paid
+    results = (C = C, AR = AR, AF = AF, A = A, BEL = BEL, RM = RM, L = L, SCR = SCR, K = K)
+    return results
+end
+
+# for example:
+
+s = simulateAcc("D")
+# 1 -> initial values | 366 -> end of year | 367 -> closing of the year
+y = [1, 366, 367]
+df = DataFrame(C = s.C[y], AR = s.AR[y], AF = s.AF[y], A = s.A[y], BEL = s.BEL[y],
+               RM = s.RM[y], L = s.L[y], SCR = s.SCR[y], K = s.K[y]
+)
+print("Total claims paid = ", round(s.C[367], digits = 2))
+println("   versus point estimate = ", round(s.BEL[1], digits = 2))
+println("Return on Equity (ROE) = ", round(100 * (s.K[367] / s.K[1] - 1), digits = 2), "%")
+
+
+## Return on Equity (ROE)
+
+function simulateROE(premiumPrinciple::String, numsims = 100_000)
+    if premiumPrinciple ∉ ["E", "V", "D"]
+        println("Premium principle must be E, V, or D. Try again!")
+        return nothing
+    end
+    ROE = zeros(numsims)
+    for j ∈ 1:numsims
+        s = simulateAcc(premiumPrinciple)
+        ROE[j] = 100 * (s.K[367] / s.K[1] - 1)
+    end
+    return ROE
+end
+
+# Under the expected value principle
+
+@time ROE_E = simulateROE("E", 100_000); # aprox 13 min 
+
+quantile(ROE_E, [0.025, 0.25, 0.50, 0.75, 0.975])
+
+begin
+    println("P(ROE_E ≥ 12%) ≈ ", mean(ROE_E .≥ 12)) 
+    println("P(insolvency) = P(ROE_E < -100%) ≈ ", mean(ROE_E .< -100))
+    histogram(ROE_E, color = :yellow, label = "", xlabel = "ROE_E", ylabel = "frequency")
+    vline!([12], color = :blue, lw = 2, label = "target")
+    vline!([-100], color = :red, lw = 2, label = "insolvency")
+end
+
+# Under the variance principle 
+
+@time ROE_V = simulateROE("V", 100_000); # aprox 13 min 
+
+quantile(ROE_V, [0.025, 0.25, 0.50, 0.75, 0.975])
+
+begin
+    println("P(ROE_V ≥ 12%) ≈ ", mean(ROE_V .≥ 12)) 
+    println("P(insolvency) = P(ROE_V < -100%) ≈ ", mean(ROE_V .< -100))
+    histogram(ROE_V, color = :yellow, label = "", xlabel = "ROE_V", ylabel = "frequency")
+    vline!([12], color = :blue, lw = 2, label = "target")
+    vline!([-100], color = :red, lw = 2, label = "insolvency")
+end
+
+# Under the fomula from exercise 2.3
+
+@time ROE_D = simulateROE("D", 100_000); # aprox 13 min 
+
+quantile(ROE_D, [0.025, 0.25, 0.50, 0.75, 0.975])
+
+begin
+    println("P(ROE_D ≥ 12%) ≈ ", mean(ROE_D .≥ 12)) 
+    println("P(insolvency) = P(ROE_D < -100%) ≈ ", mean(ROE_D .< -100))
+    histogram(ROE_D, color = :yellow, label = "", xlabel = "ROE_D", ylabel = "frequency")
+    vline!([12], color = :blue, lw = 2, label = "target")
+    vline!([-100], color = :red, lw = 2, label = "insolvency")
+end
