@@ -258,3 +258,8 @@ begin
     println("M(S) = ", (median(isimS), median(S)))
     println("VaR(S) = ", (quantile(isimS, 0.995), quantile(S, 0.995)))
 end
+
+begin
+    df = DataFrame(totclaims = S)
+    CSV.write("S.csv", df)
+end
