@@ -22,7 +22,7 @@ Close the Julia terminal and open a new one to continue:
 =#
 
 
-## Load requiered packages and code
+## Load required packages and code
 begin
     using CSV, DataFrames, Distributions, Plots
     include("06EDA.jl")
