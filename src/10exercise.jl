@@ -42,7 +42,7 @@ function simulateCRM(; β = 3.0, θ = 1.0, δ = 1.0, m = 1_000_000)
     for i ∈ iN
         Yi = rand(Pareto(2 + 1/N[i], δ), N[i]) # Y|N=n ~ Pareto(2+1/n, δ)
         S[i] = sum(Yi)
-        append!(Y, Yi)
+        push!(Y, Yi)
     end
     PS0 = 1 - count(S .> 0)/m # <-- P(S = 0)
     return (ES = mean(S), MS = median(S), VS = var(S), PS0 = PS0,
@@ -64,8 +64,8 @@ begin # run several times to check differences
 end
 
 length(sim.S), length(sim.N)
-count(sim.N .> 0)
-sum(sim.N), length(sim.Y)
+count(sim.N .> 0), length(sim.Y)
+sum(sim.N), sum(length.(sim.Y))
 
 ## Calculations about S|S>0  (positive total claims)
 
