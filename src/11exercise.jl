@@ -118,7 +118,7 @@ NB = NegativeBinomial(pmom, rmom)
 # comparing empirical vs fitted model
 pmfN(0), pdf(NB, 0) # P(N = 0)
 pmfN(1), pdf(NB, 1) # P(N = 1)
-pmfN(2), pdf(NB, 2) # P(N = 1)
+pmfN(2), pdf(NB, 2) # P(N = 2)
 1 - sum(pmfN.(collect((0:10)))), 1 - cdf(NB, 10) # P(N > 10)
 begin
     nn = collect(0:Npos.valores[end])
@@ -126,8 +126,8 @@ begin
     bar(nn, pnn, xlabel = "Frequency N", ylabel = "P(N = n)", label = "Empirical")
     scatter!(nn, pdf(NB, nn), label = "Negative Binomial", ms = 2)
 end
-# --> Negative Binomial not a bad fit
-
+# --> Negative Binomial not a bad fit, but not very good either
+# We should try other models (e.g., zero-inflated models)
 
 
 ### Severity modeling
@@ -225,11 +225,12 @@ plot!(logyy, pdf(rvLogY, logyy), lw = 2, color = :red, label = "Pareto")
 
 
 
-### Collective risk model (under usual asssumptions)
+### Collective risk model (under usual assumptions)
 
 # S = Y1 + ⋯ + YN
 
 NB # Frequency (N)
+
 rvLogY # Log-severity (log Y)
 PS0 = PN0 # P(S = 0) = P(N = 0)
 Sdata = sum.(data) # S|N>0
