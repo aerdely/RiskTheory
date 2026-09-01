@@ -1,8 +1,8 @@
-### Estimar distribuciones de probabilidades
+### Estimación empírica de probabilidades
 ### Autor: Dr. Arturo Erdely
-### versión: 10-agosto-2024
+### versión: 2025-12-28
 
-### Funciones:  distprob  masaprob  densprob
+### Funciones:  distprob  masaprob  densprob  modaDiscreta  modaContinua  intervalo
 
 
 """
@@ -84,6 +84,41 @@ end
 
 
 """
+    modaDiscreta(muestra::Vector)   
+
+Estima la(s) moda(s) a partir de un vector `muestra` de valores observados de una variable aleatoria discreta. 
+Devuelve una tupla etiquetada con:
+- `moda`: vector con la(s) moda(s)
+- `prob`: probabilidad empírica de la(s) moda(s)
+- `moda2`: vector con el(los) segundo(s) valor(es) empíricamente más probable(s)
+- `prob2`: probabilidad empírica del(los) segundo(s) valor(es) más probable(s)
+
+## Ejemplo
+```
+muestra = [1,0,4,0,3,5,6,3,0,3,1,6];
+modas = modaDiscreta(muestra);
+modas
+```
+"""
+function modaDiscreta(muestra::Vector)
+    n = length(muestra)
+    M = masaprob(muestra)
+    probsord = sort(unique(M.probs); rev = true)
+    modas = M.valores[findall(M.probs .== probsord[1])]
+    probmodas = M.fmp(modas[1])
+    if length(modas) < n # hay segundo valor más probable
+        segval = M.valores[findall(M.probs .== probsord[2])]
+        probsegval = M.fmp(segval[1])
+    else
+        segval = []
+        probsegval = Float64[]
+    end
+    return (moda = modas, prob = probmodas, moda2 = segval, prob2 = probsegval)
+end
+
+
+
+"""
     densprob(muestra::Vector{<:Real}, nclases::Integer = 0)
 
 Estima la función de densidad correspondiente al vector `muestra` de observaciones
@@ -144,4 +179,75 @@ function densprob(muestra::Vector{<:Real}, nclases::Integer = 0)
     return (fdp = f, clases = clases, reps = repsclase, min = inf, max = sup, nclases = m, muestra = muestra)
 end
 
-@info "distprob  masaprob  densprob"
+
+"""
+    modaContinua(muestra::Vector{<:Real}, nclases::Integer = 0)
+
+Estima la moda a partir de un vector `muestra` de valores observados de una variable aleatoria continua,
+considerando un total de `nclases` intervalos, parámetro que de omitirse se calcula como el `mín{√n, 30}`
+donde `n` es el tamaño de muestra. Devuelve una tupla con:
+- `moda`: vector con la(s) moda(s) empírica(s)
+- `dens`: valor de la densidad empírica en la moda empírica
+- `moda2`: vector con el(los) segundo(s) valor(es) con mayor densidad empírica
+- `dens2`: valor de la densidad empírica en el(los) segundo(s) valor(es) con mayor densidad empírica
+
+## Ejemplo
+```
+z = randn(10_000);
+muestra = vcat(z .- 2.0, z .+ 2.0); # mezcla de dos normales
+modas = modaContinua(muestra, 50);  
+modas
+```
+"""
+function modaContinua(muestra::Vector{<:Real}, nclases::Integer = 0)
+    D = densprob(muestra, nclases)
+    intdens = sort(D.fdp.(D.reps); rev = true)
+    moda = D.reps[findall(D.fdp.(D.reps) .== intdens[1])]
+    densmoda = intdens[1]
+    if length(moda) < length(D.reps) # hay segundo valor más probable
+        segval = D.reps[findall(D.fdp.(D.reps) .== intdens[2])]
+        densegval = intdens[2]
+    else
+        segval = Float64[]
+        densegval = Float64[]
+    end
+    return (moda = moda, dens = densmoda, moda2 = segval, dens2 = densegval)
+end
+
+"""
+    intervalo(muestra::Vector{<:Real}, prob = 0.95)
+
+    Estima el intervalo de probabilidad mínima (de longitud mínima) que contiene una
+proporción `prob` de la muestra dada. Devuelve una tupla etiquetada con:
+
+- `int`: el intervalo estimado  
+- `tam`: la longitud del intervalo estimado
+- `prob`: la proporción de la muestra contenida en el intervalo
+- `minmax`: el mínimo y máximo muestrales
+- `ran`: el rango muestral
+## Ejemplo
+```
+muestra = randn(100_000);
+intervalo(muestra, 0.95)
+```
+"""
+function intervalo(muestra::Vector{<:Real}, prob = 0.95)
+    xx = sort(muestra)
+    n = length(xx)
+    k = Int(round(prob * n))
+    minlen = Inf
+    a = xx[1]
+    b = xx[k]
+    for i ∈ 1:(n - k + 1)
+        len = xx[i + k - 1] - xx[i]
+        if len < minlen
+            minlen = len
+            a = xx[i]
+            b = xx[i + k - 1]
+        end
+    end
+    return (int = [a, b], tam = b-a, prob = k/n, minmax = [xx[1], xx[end]], ran = xx[end] - xx[1])
+end
+
+
+@info "distprob  masaprob  densprob  modaDiscreta  modaContinua  intervalo"
