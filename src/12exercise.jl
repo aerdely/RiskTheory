@@ -1,6 +1,6 @@
 ### Exercise: Premium principles
 ### Author: Dr. Arturo Erdely
-### Version: 2024-09-12
+### Version: 2026-10-11
 
 #=
 
@@ -11,20 +11,20 @@ accidental death, assuming that 1 out of 10 deaths is accidental (regardless
 of the age). Use the mortality table in the file `mortality.csv` 
    	
 Assume that the insurance company collects all the premiums at the beginning
-of the year. Consider a low-risk fixed 1-year interest rate of 5% and that
-the shareholders of the company expect a ROE (return on equity) of 12%. 
+of the year. Consider a low-risk fixed 1-year interest rate of 7.4% and that
+the shareholders of the company expect a ROE (return on equity) of 13%. 
 Assuming that deaths are uniformly distributed (probabilistically) throughout
 the year, using 100,000 simulations of the portfolio, estimate quantiles
 2.5%, 25%, 50% (median), 75%, and 97.5% of the ROE, and the probability
-P(ROE ≥ 12%) under each of the following premium principles:
+P(ROE ≥ 13%) under each of the following premium principles:
 
 a) Expected value principle.
 b) Variance principle.
 c) Using formula from Exercise 2.3
 
 Remember that the premiums and the solvency capital requirement must be invested
-at the low-risk interest rate of 5% but for the rest of the assets assume that
-it is possible to obtain a return of 12%.
+at the low-risk interest rate of 7.4% but for the rest of the assets assume that
+it is possible to obtain a return of 13%.
 
 =#
 
@@ -117,8 +117,8 @@ end
 =#
 
 begin
-    r = 0.12; # shareholders' return rate (ROE)
-    i = 0.05; # low-risk return rate
+    r = 0.13; # shareholders' return rate (ROE)
+    i = 0.074; # low-risk return rate
     RMe = (r - i) * SCRe # based on expected value
     RMm = (r - i) * SCRm # based on the median
     println("RMe(S) = ", RMe)
@@ -183,7 +183,7 @@ mean(PDPV)
 histogram(PDPV, label = "PD / PV", xlabel = "ratio", ylabel = "frequency", color = :green)
 
 
-### Estimation of P(ROE ≥ 12%)
+### Estimation of P(ROE ≥ 13%)
 
 ## Claims
 
@@ -200,10 +200,17 @@ function simulateClaims() # from each insurance policy
     return Claim # vector of each policy claim (if any)
 end
 
-ES, VaR, sum(simulateClaims()) # try several times just to see
+begin 
+    a = simulateClaims();
+    println("Number of claims: ", count(a .> 0.0))
+    println("Total amount of claims: \$", sum(a))
+    println("E(S) = \$", ES)
+    println("VaR(S) = \$", VaR)
+end # try several times just to see
 
 
-## Accouting 
+
+## Accounting 
 
 function simulateAcc(premiumPrinciple::String) 
     # "E" = expected value | "V" = variance | "D" = Exercise 2.3
@@ -258,9 +265,9 @@ end
 
 # for example:
 
-s = simulateAcc("D")
+s = simulateAcc("D");
 # 1 -> initial values | 366 -> end of year | 367 -> closing of the year
-y = [1, 366, 367]
+y = [1, 366, 367];
 df = DataFrame(C = s.C[y], AR = s.AR[y], AF = s.AF[y], A = s.A[y], BEL = s.BEL[y],
                RM = s.RM[y], L = s.L[y], SCR = s.SCR[y], K = s.K[y]
 )
@@ -291,7 +298,7 @@ end
 quantile(ROE_E, [0.025, 0.25, 0.50, 0.75, 0.975])
 
 begin
-    println("P(ROE_E ≥ 12%) ≈ ", mean(ROE_E .≥ 12)) 
+    println("P(ROE_E ≥ 13%) ≈ ", mean(ROE_E .≥ 13)) 
     println("P(insolvency) = P(ROE_E < -100%) ≈ ", mean(ROE_E .< -100))
     histogram(ROE_E, color = :yellow, label = "", xlabel = "ROE_E", ylabel = "frequency")
     vline!([12], color = :blue, lw = 2, label = "target")
@@ -305,7 +312,7 @@ end
 quantile(ROE_V, [0.025, 0.25, 0.50, 0.75, 0.975])
 
 begin
-    println("P(ROE_V ≥ 12%) ≈ ", mean(ROE_V .≥ 12)) 
+    println("P(ROE_V ≥ 12%) ≈ ", mean(ROE_V .≥ 13)) 
     println("P(insolvency) = P(ROE_V < -100%) ≈ ", mean(ROE_V .< -100))
     histogram(ROE_V, color = :yellow, label = "", xlabel = "ROE_V", ylabel = "frequency")
     vline!([12], color = :blue, lw = 2, label = "target")
@@ -319,7 +326,7 @@ end
 quantile(ROE_D, [0.025, 0.25, 0.50, 0.75, 0.975])
 
 begin
-    println("P(ROE_D ≥ 12%) ≈ ", mean(ROE_D .≥ 12)) 
+    println("P(ROE_D ≥ 13%) ≈ ", mean(ROE_D .≥ 13)) 
     println("P(insolvency) = P(ROE_D < -100%) ≈ ", mean(ROE_D .< -100))
     histogram(ROE_D, color = :yellow, label = "", xlabel = "ROE_D", ylabel = "frequency")
     vline!([12], color = :blue, lw = 2, label = "target")
