@@ -35,7 +35,7 @@ begin
     histogram(priorS, normalize = true, label = "prior model", 
               xlabel = "Total claims", ylabel = "density", color = :yellow)
     μ0 = mean(priorS)
-    m0 = mean(priorS)
+    m0 = median(priorS)
     q25 = quantile(priorS, 0.25)
     q75 = quantile(priorS, 0.75)
     VaR = quantile(priorS, 0.995)
@@ -54,7 +54,7 @@ begin
             return eq1 + eq2 + eq3
         end
     end
-    priorEDA = EDA(fobj, [0.01, 0.01, 0.01], [100, 100, 100_000])
+    priorEDA = EDA(fobj, [0.01, 0.01, 0.01], [100, 100, 100_000], maxiter = 10_000)
     @show n0, α, β = priorEDA.x
     x = collect(range(minimum(priorS), maximum(priorS), length = 1_000));
     X = rvStudent3(μ0, 1 / √(n0*α/((n0+1)*β)), 2*α);
@@ -71,8 +71,8 @@ begin
     npost = n0 + n
     μpost = (n0*μ0 + n*Sobsmean) / npost
     αpost = α + n/2
-    βpost = β + 0.5*n*Sobsvar + 0.5*n0*n*(μ0 - Sobsmean)^2 / npost
-    Xpost = rvStudent3(μpost, 1 / √(npost*αpost/((npost+1)*βpost)), 2*αpost+n);
+    βpost = β + 0.5*n*Sobsvar + (0.5*n0*n*(μ0 - Sobsmean)^2) / npost
+    Xpost = rvStudent3(μpost, 1 / √(npost*αpost/((npost+1)*βpost)), 2*αpost);
     plot!(x, Xpost.pdf.(x), label = "Student predictive posterior", lw = 3, color = :red)
 end
 
