@@ -133,7 +133,7 @@ function rvStudent3(μ::Real, σ::Real, ν::Real)
         S = rvStudent(ν)
         dst3(x) = S.pdf((x - μ) / σ) / σ
         pst3(x) = S.cdf((x - μ) / σ)
-        qst3(u) = 0 < u ≤ 1 ? μ +σ*S.qtl(u) : NaN
+        qst3(u) = 0 < u ≤ 1 ? μ + σ*S.qtl(u) : NaN
         rst3(n::Integer) = qst3.(rand(n))
     end
     soporte = ("]-∞ , ∞[", -Inf, Inf)
